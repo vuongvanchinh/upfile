@@ -6,7 +6,7 @@
 #include<string>
 #include<cmath>
 #include<vector>
-#include"STATUS.h"
+
 using namespace std;
 
 
@@ -36,6 +36,12 @@ SDL_Renderer* g_render = NULL;
 SDL_Texture* g_texture = NULL;
 TTF_Font* g_font = NULL;
 
+enum status {
+	left_to_right,
+	right_to_left,
+	up_left_to_right,
+	up_right_to_left
+};
 class bullet
 {
 public:
