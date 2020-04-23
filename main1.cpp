@@ -257,7 +257,7 @@ void XU_LY_DI_CHUYEN(object& background, object& nhanvat, SDL_Event& e);
 
 void XU_LY_SPRITE_NHANVAT(object& nhanvat);
 
-void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI, int& sprite);
+void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI);
 
 void XU_LY_DAN_NHAN_VAT();
 
@@ -1073,7 +1073,7 @@ void XU_LY_SPRITE_NHANVAT(object& nhanvat)
 		}
 	}
 }
-void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI, int& sprite)
+void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI)
 {
 	//Doi luon o cuoi man hinh
 	QUAI_DOI.setposx(background.getposx() + FULLSCREEN - 256);
