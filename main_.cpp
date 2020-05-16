@@ -1,4 +1,4 @@
-
+﻿
 #include"GENERAL.h"
 //#include"bullet.h"
 #include"object.h"
@@ -33,25 +33,38 @@ TTF_Font* g_font = NULL;
 object background, nhanvat, background_menu;
 
 quai_object QUAI_DOI;
+
 vector<quai_object*>chimbay;
+
 SDL_Rect sprite_quaidoi[2];
+
 SDL_Rect spritechimbay[6];
+
 SDL_Rect sprite_bullet_QUAI[7];
 
 
 
 
 SDL_Rect spritenhanvat[26];
+
 SDL_Rect sprite_bulletnhanvat[4];
+
 vector<bullet*> money;
+
 SDL_Rect sprite_monney[4];
 
 SDL_Rect sprite_fire[8];
+
 Text g_text;
 
 bullet fire, gift_money;
 
-float  he_so_goc_duong_dan=2.0 ;
+/*mục đích là muốn đạn của quái luôn bay về hướng của nhân vật nhưng do các pixel là 
+nguyên nên không thể lưu ở dạng float hay double phải lưu ở dạng phân số a/b trong dó a/b tối giản 
+khi đó x giảm a thì y sẽ tăng b ,khởi tao ban đầu chỉ là tạm thời ;
+*/ 
+int he_so_goc_duong_dan[2] = { 2,1 };
+
 
 //===================================================================================
 
@@ -59,7 +72,9 @@ float  he_so_goc_duong_dan=2.0 ;
 void PLAY_GAME();
 
 
-void show_menu();
+void show_menu(bool& quit_, SDL_Event &event_, Text selections[],
+				int vitrix[], int vitriy[], SDL_Color Color[], int toadox, int toadoy);
+
 bool init();
 bool loadmedia(SDL_Renderer* &g_render);
 void close();
@@ -85,24 +100,28 @@ void khoi_tao_sprite_fire(bool& thanhcong, SDL_Renderer* &g_render);
 void khoi_tao_sprite_trai_tim(bool &thanhcong, SDL_Renderer* &g_render);
 void khoi_tao_sprite_monney(bool& thanhcong, SDL_Renderer* &g_render);
 void khoi_tao_TTF(bool& thanhcong, SDL_Renderer* &g_render, TTF_Font* &g_font);
-
+void khoi_tao_money(int vitrix, int vitriy, SDL_Renderer*& g_render);
 //khoi tao am thanh
 void khoi_tao_am_thanh(bool& thanhcong);
 // khoi tao bang dan va play sounds 
 void khoitaobangdan(object& nhanvat, SDL_Event& e);
-// ddieu chinh vi tri dan
+// ddieu chinh vi tri dan duoc ban ra 
 int is_left_to_right(status trangthai);
 // cac ham show
-void show_money(vector<bullet*> &money);
-void show_trai_tim(int traitim);
-void show_fire(int vitrix, int vitriy, int khunghinh);
-void show_score(int score);
-void khoi_tao_money(int vitrix, int vitriy);
+void show_money(vector<bullet*> &money, SDL_Renderer*& g_render);
+void show_trai_tim(int traitim, SDL_Renderer*& g_render);
+void show_fire(int vitrix, int vitriy, int khunghinh, SDL_Renderer* &g_render);
+void show_score(int score, SDL_Renderer*& g_render);
+
 
 // xu ly ket thuc game 
 void end_game(bool& quit);
-/// ham xu ly va cham truyen vao 8 doi so la toa do va w, h cua hai doi tuong 
+/// ham kiem tra va cham truyen vao 8 doi so la toa do va w, h cua hai doi tuong 
 bool isVaCham(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
+// hàm ươc chung lon nhat để đưa hẹ số góc về tối giản 
+int UCLN(int a, int b);
+
+
 int main(int agrv, char* agrs[])
 {
 	if (init() == false)
@@ -117,7 +136,29 @@ int main(int agrv, char* agrs[])
 		}
 		else
 		{
-			show_menu();
+			Text selections[2];
+
+			SDL_Color Color[2] = { { 71,187,156 }, { 255,255,0 } };
+
+			selections[0].set_textureText("PLAY NOW");
+			selections[0].set_color(Color[0]);
+			selections[0].loadFromRenderedText(g_render, g_font);
+
+			selections[1].set_textureText("EXIT");
+			selections[1].set_color(Color[0]);
+			selections[1].loadFromRenderedText(g_render, g_font);
+
+			SDL_Event l_event;
+			bool quit_ = false;
+			
+
+			int vitrix[2] = { (SCREEN_WIDTH - selections[0].getWidth()) / 2,
+							(SCREEN_WIDTH - selections[1].getWidth()) / 2 };
+
+			int vitriy[2] = { SCREEN_HEIGHT / 2 - 30, SCREEN_HEIGHT / 2 };
+
+			int toadox = 0, toadoy = 0;
+			show_menu(quit_, l_event, selections, vitrix, vitriy,Color, toadox, toadoy);
 		}
 	}
 	close();
@@ -131,11 +172,15 @@ void XU_LY_DAN_NHAN_VAT(object &nhanvat)
 {
 	if (nhanvat.getmang_song() > 0)
 	{
-		for (int i = 0; i < nhanvat.bulletnhanvat.size(); i++)
+		int i=0;
+
+		while(i < nhanvat.bulletnhanvat.size())
 		{
+			bool ban_trung = false;
 			if (nhanvat.bulletnhanvat.at(i) != NULL)
 			{
 				bullet* l_bullet = nhanvat.bulletnhanvat.at(i);
+
 				///show dan
 				l_bullet->render(NULL, g_render);
 				// xu ly trang thai di chuyen cua dan  
@@ -147,62 +192,92 @@ void XU_LY_DAN_NHAN_VAT(object &nhanvat)
 				else {
 					l_bullet->setposx(l_bullet->getposx() - vantocdan_nhanvat);
 				}
+
+
 				// xu ly cham bien==============================================================================================
 				if (l_bullet->getposx() < -15 || l_bullet->getposx() > SCREEN_WIDTH)
 				{
-					//bulletnhanvat[i]->free();
+					l_bullet->free();
 					nhanvat.bulletnhanvat.erase(nhanvat.bulletnhanvat.begin() + i);
 					delete l_bullet;
+
+					ban_trung = true;
+					
 				}
 				else
 				{// xu_ly ban trung QUAI DOI
-					if (isVaCham(l_bullet->getposx(), l_bullet->getposy(),24, 13, QUAI_DOI.getposx(), QUAI_DOI.getposy(), 245, 256)==true)
+					if (isVaCham(l_bullet->getposx(), l_bullet->getposy(),24, 13,
+						QUAI_DOI.getposx(), QUAI_DOI.getposy(), 245, 256)==true)
 					{
 						QUAI_DOI.setsolantrungdan(QUAI_DOI.getsolantrungdan() + 1);
-						show_fire(QUAI_DOI.getposx()+10, QUAI_DOI.getposy() , 1);
-						nhanvat.bulletnhanvat.erase(nhanvat.bulletnhanvat.begin() + i);
+
+						show_fire(QUAI_DOI.getposx()+10, QUAI_DOI.getposy() , 1, g_render);
 
 						if (QUAI_DOI.getsolantrungdan() % 5 == 0)
 						{
 							Mix_PlayChannel(-1, tieng_quaivat_trung_dan, 0);
 						}
 
+						l_bullet->free();
+						nhanvat.bulletnhanvat.erase(nhanvat.bulletnhanvat.begin() + i);
 						delete l_bullet;
+
+						ban_trung = true;
 					}
 					else
 					{/// xu ly trung chim bay 
-						for (int ichimbay = 0; ichimbay < chimbay.size(); ichimbay++)
-						{
-							if (isVaCham(l_bullet->getposx(), l_bullet->getposy(),24,13,chimbay[ichimbay]->getposx(),
-								chimbay[ichimbay]->getposy(),70, spritechimbay[chimbay[ichimbay]->getkhunghinh() / DELAY_SPRITE_CHIMBAY].h) == true)
-							{
-								chimbay[ichimbay]->setsolantrungdan(chimbay[ichimbay]->getsolantrungdan() + 1);
-								// xu ly chim chet
-								if (chimbay[ichimbay]->getsolantrungdan() >= SO_LAN_CHIM_MAX)
-								{
-									show_fire(chimbay[ichimbay]->getposx() - 50, chimbay[ichimbay]->getposy() - 185, 1);
+						int ichimbay = 0;
 
-									khoi_tao_money(chimbay[ichimbay]->getposx(), chimbay[ichimbay]->getposy());
+						while (ichimbay < chimbay.size())
+						{
+							quai_object* l_chimbay = chimbay[ichimbay];
+
+							if (isVaCham(l_bullet->getposx(), l_bullet->getposy(), 24, 13,
+								l_chimbay->getposx(), l_chimbay->getposy(),
+								70, spritechimbay[l_chimbay->getkhunghinh() /
+								DELAY_SPRITE_CHIMBAY].h) == true)
+							{
+								l_chimbay->setsolantrungdan(l_chimbay->getsolantrungdan() + 1);
+								// xu ly chim chet
+								if (l_chimbay->getsolantrungdan() >= SO_LAN_CHIM_MAX)
+								{
+									show_fire(l_chimbay->getposx() - 50,
+										l_chimbay->getposy() - 185, 1, g_render);
+
+									khoi_tao_money(l_chimbay->getposx(),
+										l_chimbay->getposy(), g_render);
+
+									l_chimbay->free();
 									chimbay.erase(chimbay.begin() + ichimbay);
+									delete l_chimbay;
+
 									Mix_PlayChannel(-1, tieng_qua_chet, 0);
+
 								}
 								else
 								{
-									show_fire(chimbay[ichimbay]->getposx() - 50, chimbay[ichimbay]->getposy() - 185, 0);
+									show_fire(chimbay[ichimbay]->getposx() - 50,
+										chimbay[ichimbay]->getposy() - 185, 0, g_render);
 								}
-								
-
+								l_bullet->free();
 								nhanvat.bulletnhanvat.erase(nhanvat.bulletnhanvat.begin() + i);
-								
-								l_bullet;
+								delete l_bullet;
+
+								ban_trung = true;
 								break;
 							}
+							else
+							{
+								ichimbay++;
+							}
 						}
-						
-						
-					}
 
+					}
 				}
+			}
+			if (ban_trung == false)
+			{
+				i++;
 			}
 		}
 	
@@ -215,21 +290,26 @@ void XU_LY_SPRITE_QUAI_BAY()
 {
 	for (int i = 0; i < chimbay.size(); i++)
 	{
+// nếu khoang cách của chim và nhân vật nhnhỏ hơn SCREEN_WIDTH-LIMIT_FRIRST thì mới kết xuất chim ra mà hình ra 
 		if (abs(nhanvat.getposx() - chimbay[i]->getposx()) < SCREEN_WIDTH-LIMIT_FRIRST)
 		{
 			// show chim bay 
-			chimbay[i]->render(&spritechimbay[chimbay[i]->getkhunghinh() / DELAY_SPRITE_CHIMBAY], g_render);
+			chimbay[i]->render(&spritechimbay[chimbay[i]->getkhunghinh() / DELAY_SPRITE_CHIMBAY],g_render);
 		
 			// neu chim cham nguoi
-			if (isVaCham(nhanvat.getposx(), nhanvat.getposy(),spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w,
+			if (isVaCham(nhanvat.getposx(), nhanvat.getposy(),
+				spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w,
 				spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h,
-				chimbay[i]->getposx(), chimbay[i]->getposy(),spritechimbay[chimbay[i]->getkhunghinh()/DELAY_SPRITE_CHIMBAY].w,
+				chimbay[i]->getposx(), chimbay[i]->getposy(),
+				spritechimbay[chimbay[i]->getkhunghinh()/DELAY_SPRITE_CHIMBAY].w,
 				spritechimbay[chimbay[i]->getkhunghinh() / DELAY_SPRITE_CHIMBAY].h)==true)	
 			{
-				nhanvat.setmang_song(nhanvat.getmang_song()-2);
-				show_fire(chimbay[i]->getposx() - 100, chimbay[i]->getposy() - 100, 1);
+				nhanvat.setmang_song(nhanvat.getmang_song()-1);
+				show_fire(chimbay[i]->getposx() - 100, chimbay[i]->getposy() - 100, 1, g_render);
 				Mix_PlayChannel(-1, tieng_nguoi_trung_dan, 0);
 				//xoa
+				chimbay[i]->free();
+				delete chimbay[i];
 				chimbay.erase(chimbay.begin() + i);
 			}
 			else
@@ -266,16 +346,17 @@ void XU_LY_SPRITE_QUAI_BAY()
 				}
 				else// xu ly dan trung nhanvat
 				{
-					if (isVaCham(nhanvat.getposx(),nhanvat.getposy(),spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w, 
-						spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h, chimbay[i]->BULLET.getposx(), chimbay[i]->BULLET.getposy(), 22, 25) == true)
-						
+					if (isVaCham(nhanvat.getposx(),nhanvat.getposy(),
+						spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w, 
+						spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h,
+						chimbay[i]->BULLET.getposx(), chimbay[i]->BULLET.getposy(), 22, 25) == true)
 					{
 						nhanvat.setmang_song(nhanvat.getmang_song() - 1);
 
 						chimbay[i]->BULLET.setposx(chimbay[i]->getposx());
 						chimbay[i]->BULLET.setposy(chimbay[i]->getposy());
 
-						show_fire(nhanvat.getposx() - 70, nhanvat.getposy() - 150, 0);
+						show_fire(nhanvat.getposx() - 70, nhanvat.getposy() - 150, 0, g_render);
 
 						
 						//amthanh
@@ -303,7 +384,7 @@ void XU_LY_SPRITE_QUAI_BAY()
 
 void XU_LY_DI_CHUYEN(object &background, object &nhanvat,SDL_Event &e)
 {
-	if (e.type == SDL_KEYDOWN ||nhanvat.getmang_song()>0)
+	if (e.type == SDL_KEYDOWN && nhanvat.getmang_song()>0)
 	{
 		switch (e.key.keysym.sym)
 		{
@@ -327,16 +408,15 @@ void XU_LY_DI_CHUYEN(object &background, object &nhanvat,SDL_Event &e)
 				// cho chim bay di chuyen theo 
 				for (int i = 0; i < chimbay.size(); i++)
 				{
-				
 					chimbay[i]->setposx(chimbay[i]->getposx() + vantocnhanvat);
-					chimbay[i]->BULLET.setposx(chimbay[i]->BULLET.getposx() + vantocnhanvat);
-					
+					chimbay[i]->BULLET.setposx(chimbay[i]->BULLET.getposx() + vantocnhanvat);	
 				}
 				// cho money di chuyen theo 
 				for (int j = 0; j < money.size(); j++)
 				{
 					money.at(j)->setposx(money.at(j)->getposx() + vantocnhanvat);
 				}
+
 				if (abs(QUAI_DOI.getposx() - nhanvat.getposx()) < SCREEN_WIDTH)
 				{
 					QUAI_DOI.BULLET.setposx(QUAI_DOI.BULLET.getposx() + vantocnhanvat);
@@ -445,7 +525,9 @@ void XU_LY_SPRITE_NHANVAT(object &nhanvat)
 			nhanvat.settrangthai(right_to_left);
 			nhanvat.setkhunghinh(18 * DELAY_SPRITE_NHANVAT);
 			break;
+		default: break;
 		}
+		
 	}
 
 	if (nhanvat.gettrangthai() == left_to_right)
@@ -458,20 +540,25 @@ void XU_LY_SPRITE_NHANVAT(object &nhanvat)
 	{
 		if (nhanvat.gettrangthai() == right_to_left)
 		{
-			if (nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT>= 23) nhanvat.setkhunghinh(18*DELAY_SPRITE_NHANVAT);
+			if (nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT>= 23) 
+				nhanvat.setkhunghinh(18*DELAY_SPRITE_NHANVAT);
 		}
 	}
 }
 void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI )
-{ 
-	//Doi luon o cuoi man hinh
-		QUAI_DOI.setposx(background.getposx() + FULLSCREEN - 256);
-		QUAI_DOI.setposy(DOCAOSAN - 350);
-		if (abs(nhanvat.getposx() - QUAI_DOI.getposx()) <= SCREEN_WIDTH - LIMIT_FRIRST)
+{ 	
+		if (QUAI_DOI.getsolantrungdan() < solanbantrungmax_QUAI_DOI)
 		{
-			if (QUAI_DOI.getsolantrungdan() < solanbantrungmax_QUAI_DOI)
+			//Doi luon o cuoi man hinh
+			QUAI_DOI.setposx(background.getposx() + FULLSCREEN - 256);
+			QUAI_DOI.setposy(DOCAOSAN - 350);
+
+			if (abs(nhanvat.getposx() - QUAI_DOI.getposx()) <= SCREEN_WIDTH - LIMIT_FRIRST)
+
 			{
-				QUAI_DOI.render(&sprite_quaidoi[QUAI_DOI.getkhunghinh() / DELAY_SPRITE_QUAI_DOI], g_render);
+				
+				QUAI_DOI.render(&sprite_quaidoi[QUAI_DOI.getkhunghinh() / 
+					DELAY_SPRITE_QUAI_DOI], g_render);
 
 				// XU LY KHUNG HINH QUAI DOI
 				if (QUAI_DOI.getkhunghinh() / DELAY_SPRITE_QUAI_DOI >= 2)
@@ -482,41 +569,53 @@ void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI )
 
 				//XU LY DAN QUAI DOI==================================================
 				
-				QUAI_DOI.BULLET.render(&sprite_bullet_QUAI[QUAI_DOI.BULLET.getkhunghinh()/DELAY_SPRITE_BULLET_QUAI_DOI], g_render);
+				QUAI_DOI.BULLET.render(&sprite_bullet_QUAI[QUAI_DOI.BULLET.getkhunghinh()/
+					DELAY_SPRITE_BULLET_QUAI_DOI], g_render);
 				
-				//xu ly khi dan cham san
+				//xu ly khi dan cham bien
 				if (QUAI_DOI.BULLET.getposy() >= DOCAOSAN|| QUAI_DOI.BULLET.getposx()<=0)
 				{
-					QUAI_DOI.BULLET.setposy(QUAI_DOI.getposy() + 100);
-					QUAI_DOI.BULLET.setposx(QUAI_DOI.getposx()-10);
-					he_so_goc_duong_dan =(float(QUAI_DOI.getposy()  - nhanvat.getposy() ) / float(nhanvat.getposx()-QUAI_DOI.getposx() + 10 )+1);
+					QUAI_DOI.BULLET.setposy(QUAI_DOI.getposy() );
+					QUAI_DOI.BULLET.setposx(QUAI_DOI.getposx()+50);
+
+
+					int ucln = UCLN(nhanvat.getposy() + 50 - QUAI_DOI.getposy(),
+									QUAI_DOI.getposx() - nhanvat.getposx());
+
+					// cap nhat he so goc duong dan 
+					he_so_goc_duong_dan[0] = (QUAI_DOI.getposx() - nhanvat.getposx()) / ucln;
+					he_so_goc_duong_dan[1] = ( nhanvat.getposy()+50 - QUAI_DOI.getposy()) / ucln;
 				}
 				else
 				{
-					// XU LY DAN TRUNG NHAN VAT
-					if (isVaCham(nhanvat.getposx(), nhanvat.getposy(), spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w,
-						spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h, QUAI_DOI.BULLET.getposx(), QUAI_DOI.BULLET.getposy(), 22, 25) == true)
+					// XU LY DAN cua TRUNG NHAN VAT
+					if (isVaCham(nhanvat.getposx(), nhanvat.getposy(),
+						spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w,
+						spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h,
+						QUAI_DOI.BULLET.getposx(), QUAI_DOI.BULLET.getposy(), 22, 25) == true)
 					{
-						nhanvat.setmang_song(nhanvat.getmang_song() - 2);
+						nhanvat.setmang_song(nhanvat.getmang_song() - 1);
 						
-						show_fire(nhanvat.getposx()-50, nhanvat.getposy()-100, 0);
-						QUAI_DOI.BULLET.setposy(QUAI_DOI.getposy() + 100);
-						QUAI_DOI.BULLET.setposx(QUAI_DOI.getposx() - 10);
+						show_fire(nhanvat.getposx()-50, nhanvat.getposy()-100, 0, g_render);
+
+						QUAI_DOI.BULLET.setposy(QUAI_DOI.getposy() );
+						QUAI_DOI.BULLET.setposx(QUAI_DOI.getposx() +50);
 
 						Mix_PlayChannel(-1, tieng_nguoi_trung_dan, 0);
 					
 						
 					}
 					else
-					{// CAP NHAT VI TRI DAN
-						if (QUAI_DOI.getkhunghinh() % 2 == 0)
+					{
+						/*// CAP NHAT VI TRI DAN <mucj dichs cua QUAI_DOI.getkhunghinh() % 10== 0 
+						mới cap nhaạt vị trí là để đạn đi chậm hơn */
+						if (QUAI_DOI.getkhunghinh() % DELAY_SPRITE_QUAI_DOI == 0)
 						{
-							QUAI_DOI.BULLET.setposy(QUAI_DOI.BULLET.getposy() +he_so_goc_duong_dan);
-							QUAI_DOI.BULLET.setposx(QUAI_DOI.BULLET.getposx() -3);
+							QUAI_DOI.BULLET.setposy(QUAI_DOI.BULLET.getposy()+he_so_goc_duong_dan[1] );
+							QUAI_DOI.BULLET.setposx(QUAI_DOI.BULLET.getposx() - he_so_goc_duong_dan[0]);
 						}
 						
-						// xu ly khung hinh dan
-						
+						// cho đạn chuyển màu 
 						if (QUAI_DOI.BULLET.getkhunghinh()/DELAY_SPRITE_BULLET_QUAI_DOI > 5)
 						{
 							QUAI_DOI.BULLET.setkhunghinh(0);
@@ -580,16 +679,19 @@ bool init()
 bool loadmedia(SDL_Renderer* &g_render)
 {
 	bool thanhcong = true;
+	
 	if (background.loadimage("hinh_anh/background.png",g_render) == false)
 	{
 		cout << "load anh nen that bai:";
 		thanhcong = false;
 	}
+	
 	if (background_menu.loadimage("hinh_anh/menu.png",g_render) == false)
 	{
 		cout << "load anh nen that bai:";
 		thanhcong = false;
 	}
+	
 	// tao sprite nhan vat 
 	khoi_tao_sprite_nhanvat(thanhcong,g_render);
 
@@ -614,25 +716,28 @@ bool loadmedia(SDL_Renderer* &g_render)
 }
 void close()
 {
+	// xoa chim bay
 	for (int i = 0; i < chimbay.size(); i++)
 	{
 
 		chimbay[i]->free();
+		delete chimbay[i];
 	}
-	for (int i = 0 ; i < nhanvat.bulletnhanvat.size(); i++)
-	{
-		nhanvat.bulletnhanvat[i]->free();
-	}
+
 	fire.free();
 	//CHIM_BAY.free();
 	nhanvat.free();
+
 	background.free();
+
 	QUAI_DOI.free();
 	SDL_DestroyWindow(g_window);
 	SDL_DestroyRenderer(g_render);
 	
 	g_window = NULL;
 	g_render = NULL;
+
+	/// delete các biến âm thanh 
 	Mix_FreeChunk(tieng_sung);
 	tieng_sung = NULL;
 
@@ -661,11 +766,12 @@ void close()
 	tieng_quaivat_that_bai = NULL;
 
 
-
 	SDL_Quit();
 	IMG_Quit();
 	Mix_Quit();
+	TTF_Quit();
 }
+
 void khoi_tao_quaibay()
 {
 	for (int i = 0; i < SO_CHIM_BAY; i += 2)
@@ -705,6 +811,7 @@ void khoi_tao_sprite_bullet_QUAI(bool& thanhcong, SDL_Renderer* &g_render)
 			sprite_bullet_QUAI[i].h = 25;
 		}
 	}
+	delete newbullet;
 
 }
 void khoi_tao_sprite_nhanvat(bool thanhcong, SDL_Renderer* &g_render)
@@ -958,8 +1065,8 @@ void khoi_tao_sprite_trai_tim(bool &thanhcong, SDL_Renderer* &g_render)
 }
 void khoi_tao_sprite_monney(bool& thanhcong, SDL_Renderer* &g_render)
 {
-	bullet money;
-	if (money.loadimage("hinh_anh/money.png",g_render) == false)
+	bullet *money=new bullet();
+	if (money->loadimage("hinh_anh/money.png",g_render) == false)
 	{
 		thanhcong = false;
 	}
@@ -986,6 +1093,7 @@ void khoi_tao_sprite_monney(bool& thanhcong, SDL_Renderer* &g_render)
 		sprite_monney[3].h = 22;
 
 	}
+	delete money;
 }
 void khoi_tao_am_thanh(bool& thanhcong)
 {
@@ -1089,6 +1197,7 @@ void khoitaobangdan(object& nhanvat, SDL_Event& e)
 		}
 	}
 }
+
 int is_left_to_right(status trangthai)
 {
 	if (trangthai == left_to_right || trangthai == up_left_to_right)
@@ -1096,7 +1205,7 @@ int is_left_to_right(status trangthai)
 	return -5;
 }
 // cac ham show
-void khoi_tao_money( int vitrix, int vitriy)
+void khoi_tao_money( int vitrix, int vitriy, SDL_Renderer* &g_render)
 {
 	for (int i_money = 0; i_money < 4; i_money++)
 	{
@@ -1108,7 +1217,7 @@ void khoi_tao_money( int vitrix, int vitriy)
 		money.push_back(l_money);
 	}
 }
-void show_money(vector<bullet*> &money)
+void show_money(vector<bullet*> &money, SDL_Renderer*& g_render)
 {
 	for (int i= 0; i <money.size(); i++)
 	{
@@ -1127,20 +1236,22 @@ void show_money(vector<bullet*> &money)
 			{
 				nhanvat.set_money(nhanvat.get_money() + 1);
 				money.at(i)->free();
+				delete money.at(i);
 				money.erase(money.begin() + i);
+
 				// am thanh 
 				Mix_PlayChannel(-1, tieng_nhat_duoc_tien, 0);
 			}
 		}
 	}
 }
-void show_fire(int vitrix, int vitriy, int khunghinh)
+void show_fire(int vitrix, int vitriy, int khunghinh, SDL_Renderer* &g_render)
 {
 	fire.setposx(vitrix);
 	fire.setposy(vitriy);
 	fire.render(&sprite_fire[khunghinh], g_render);
 }
-void show_trai_tim(int traitim)
+void show_trai_tim(int traitim, SDL_Renderer*& g_render)
 {
 	for (int it = 0; it <traitim; it++)
 	{
@@ -1148,7 +1259,7 @@ void show_trai_tim(int traitim)
 		nhanvat.traitim[it]->render(NULL, g_render);
 	}
 }
-void show_score(int score)
+void show_score(int score, SDL_Renderer*& g_render)
 {
 	SDL_Color textColor = { 0, 255,0 };
 	g_text.set_color(textColor);
@@ -1162,56 +1273,50 @@ void show_score(int score)
 bool isVaCham(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
 {
 	// toa do x
-	bool X = ((x1 + w1 >= x2 && x1 +w1< x2 + w2)||(x2+w2>x1 && x2+w2 <x1+w1));
-	bool Y = ((y1 + h1 > y2&&  y1+h1 > y2 + h2 )|| (y2+h2>y1&& y2+h2>y1+h1));
+	bool X = ((x1 + w1 >= x2 && x1<x2+w2));
+	bool Y = ((y1 + h1 > y2 && y2 + h2 > y1));
 
 	return X && Y;
 }
-void show_menu()
+int UCLN(int a, int b)
 {
-	Text selections[2];
-
-	SDL_Color color = { 71,187,156 }, color2 = { 255,255,0 };
+	a = abs(a);
+	b = abs(b);
+	while (a != b)
+	{
+		if (a > b)a = a - b;
+		if (b > a) b = b - a;
+	}
+	return a;
+}
+void show_menu(bool &quit_, SDL_Event &event_, Text selections[],
+	int  vitrix[], int vitriy[], SDL_Color Color[], int toadox, int toadoy)
+{
 	
-	selections[0].set_textureText("PLAY NOW");
-	selections[0].set_color(color);
-	selections[0].loadFromRenderedText(g_render, g_font);
-	
-	selections[1].set_textureText("EXIT");
-	selections[1].set_color(color);
-	selections[1].loadFromRenderedText(g_render, g_font);
-
-	SDL_Event e_event;
-	bool quit_ = false;
-	int toadox , toadoy;
-
-	int vitrix[2] = { (SCREEN_WIDTH- selections[0].getWidth()) / 2,
-		(SCREEN_WIDTH -selections[1].getWidth())/2 },
-		vitriy[2] = { SCREEN_HEIGHT / 2 - 30, SCREEN_HEIGHT / 2 };
 	while (quit_ == false)
 	{
-		while (SDL_PollEvent(&e_event) != 0)
+		while (SDL_PollEvent(&event_) != 0)
 		{
-			if (e_event.type == SDL_MOUSEMOTION)
+			if (event_.type == SDL_MOUSEMOTION)
 			{
 				SDL_GetMouseState(&toadox, &toadoy);
 				for (int i = 0; i < 2; i++)
 				{
 					if (isVaCham(toadox, toadoy, 1, 1, vitrix[i], vitriy[i], selections[i].getWidth(), selections[i].getHeight()) == true)
 					{
-						selections[i].set_color(color2);
+						selections[i].set_color(Color[1]);
 					}
 					else
 					{
-						selections[i].set_color(color);
+						selections[i].set_color(Color[0]);
 					}
 				}
 			}
 			else
 			{
-				if (e_event.type == SDL_MOUSEBUTTONDOWN)
+				if (event_.type == SDL_MOUSEBUTTONDOWN)
 				{
-					if (e_event.button.button == SDL_BUTTON_LEFT)
+					if (event_.button.button == SDL_BUTTON_LEFT)
 					{
 						SDL_GetMouseState(&toadox, &toadoy);
 						for (int i = 0; i < 2; i++)
@@ -1233,7 +1338,7 @@ void show_menu()
 					}
 				}
 				else 
-				if (e_event.type == SDL_QUIT)
+				if (event_.type == SDL_QUIT)
 				{
 					quit_ = true;
 				}
@@ -1243,15 +1348,17 @@ void show_menu()
 		SDL_RenderClear(g_render);
 
 		background_menu.render(NULL, g_render);
+
+
 		for (int i = 0; i < 2; i++)
 		{
+			// update color 
 			selections[i].loadFromRenderedText(g_render, g_font);
+			// show text 
 			selections[i].render(g_render, vitrix[i], vitriy[i],NULL);
 		}
 		SDL_RenderPresent(g_render);
 	}
-
-
 }
 void PLAY_GAME()
 {
@@ -1289,11 +1396,11 @@ void PLAY_GAME()
 
 		XU_LY_DAN_NHAN_VAT(nhanvat);
 
-		show_trai_tim(nhanvat.getmang_song());
+		show_trai_tim(nhanvat.getmang_song(), g_render);
 
-		show_money(money);
+		show_money(money, g_render);
 
-		show_score(nhanvat.get_money());
+		show_score(nhanvat.get_money(), g_render);
 
 		//================================================================
 		end_game(quit);
@@ -1302,39 +1409,49 @@ void PLAY_GAME()
 }
 void end_game(bool &quit)
 {
+	// if lost game 
 	if (nhanvat.getmang_song() < 0)
 	{
 		Mix_PlayChannel(-1, tieng_nguoi_that_bai, 0);
 		
 		quit = true;
+		// show masage 
 	}
+	//win game 
+
 	if (QUAI_DOI.getsolantrungdan() > solanbantrungmax_QUAI_DOI)
 	{
-
-		
+	
 		//bom
-
-		if (fire.getkhunghinh() / 2 < 8)
+		if (fire.getkhunghinh() / 5 < 8)
 		{
-			show_fire(QUAI_DOI.getposx(), QUAI_DOI.getposy(), fire.getkhunghinh() / 2);
+			// làm show fire chậm hơn một chút 
+			if(fire.getkhunghinh()%5==0)
+				show_fire(QUAI_DOI.getposx(), QUAI_DOI.getposy(), fire.getkhunghinh() / 5, g_render);
+
 			fire.setkhunghinh(fire.getkhunghinh() + 1);
 		}
 		else {
 			//sau khi bom no 
-			if (fire.getkhunghinh() / 2 == 8)
+			if (fire.getkhunghinh() / 5 == 8)
 			{
 				Mix_PlayChannel(-1, tieng_quaivat_that_bai, 0);
 				fire.setkhunghinh( 20);// chi cho am tanh chay mot lan 
-
 			}
 			gift_money.setposy(DOCAOSAN - 268);
-			gift_money.setposx(QUAI_DOI.getposx() - 200);
+			gift_money.setposx(SCREEN_WIDTH - 200);
 			gift_money.render(NULL, g_render);
-
-			if (isVaCham(nhanvat.getposx()-100, nhanvat.getposy(), 120, 127, gift_money.getposx(), gift_money.getposy(), 300, 500) == true)
+			// neu nhan vat nhan dc tien
+			if (isVaCham(nhanvat.getposx()-100, nhanvat.getposy(), 120, 127, gift_money.getposx(),
+				gift_money.getposy(), 300, 500) == true)
 			{
 				nhanvat.set_money(nhanvat.get_money() + 1000);
-				
+				// xoa het dan
+				for (int i = 0; i < nhanvat.bulletnhanvat.size(); i++)
+				{
+					nhanvat.bulletnhanvat.erase(nhanvat.bulletnhanvat.begin() + i);
+				}
+
 				quit = true;
 			}
 		}
@@ -1343,8 +1460,11 @@ void end_game(bool &quit)
 }
 void reset()
 {
-	
+
+	QUAI_DOI.loadimage("hinh_anh/quaidoi2.png", g_render);
+
 	QUAI_DOI.setsolantrungdan(0);
+
 	QUAI_DOI.BULLET.loadimage("hinh_anh/bullet_quai.png",g_render);
 
 	fire.loadimage("hinh_anh/fire.png",g_render);
@@ -1358,21 +1478,25 @@ void reset()
 	nhanvat.settrangthai(left_to_right);
 	nhanvat.set_money(0);
 
+	
 	background.setposx(0);
 
-	
 	// XOA CHIM BAY KHOI TAO LAI
 
 	for (int i = 0; i < chimbay.size(); i++)
 	{
-		chimbay[i]->free();
+		quai_object* l_chimbay = chimbay[i];
 		chimbay.erase(chimbay.begin() + i);
+		l_chimbay->free();
+		delete l_chimbay;
 	}
 	khoi_tao_quaibay();
 	// xoa het tien 
 	for (int j = 0; j < money.size(); j++)
 	{
-		money[j]->free();
+		bullet* l_money = money[j];
 		money.erase(money.begin() + j);
+		l_money->free();
+		delete l_money;
 	}
 }
