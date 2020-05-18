@@ -1436,13 +1436,20 @@ void end_game(bool &quit)
 			if (fire.getkhunghinh() / 5 == 8)
 			{
 				Mix_PlayChannel(-1, tieng_quaivat_that_bai, 0);
-				fire.setkhunghinh( 20);// chi cho am tanh chay mot lan 
+				fire.setkhunghinh( 100);// 100 laf mootj soos baats kif mucj dichs laf de no !=40 chi cho am tanh chay mot lan 
+
+				/// set vij tris in ra gift 
+				gift_money.setposy(DOCAOSAN - 268);
+				gift_money.setposx(SCREEN_WIDTH - 300);
 			}
-			gift_money.setposy(DOCAOSAN - 268);
-			gift_money.setposx(SCREEN_WIDTH - 200);
-			gift_money.render(NULL, g_render);
+			else
+			{
+				// keets xuat ra man hin
+				gift_money.render(NULL, g_render);
+			}
+			
 			// neu nhan vat nhan dc tien
-			if (isVaCham(nhanvat.getposx()-100, nhanvat.getposy(), 120, 127, gift_money.getposx(),
+			if (isVaCham(nhanvat.getposx()-90, nhanvat.getposy(), 120, 127, gift_money.getposx(),
 				gift_money.getposy(), 300, 500) == true)
 			{
 				nhanvat.set_money(nhanvat.get_money() + 1000);
