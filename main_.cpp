@@ -112,7 +112,7 @@ void show_money(vector<bullet*> &money, SDL_Renderer*& g_render);
 void show_trai_tim(int traitim, SDL_Renderer*& g_render);
 void show_fire(int vitrix, int vitriy, int khunghinh, SDL_Renderer* &g_render);
 void show_score(int score, SDL_Renderer*& g_render);
-
+void ShowMesage(string s, int score);
 
 // xu ly ket thuc game 
 void end_game(bool& quit);
@@ -1413,7 +1413,10 @@ void end_game(bool &quit)
 	if (nhanvat.getmang_song() < 0)
 	{
 		Mix_PlayChannel(-1, tieng_nguoi_that_bai, 0);
-		
+		string score = to_string(nhanvat.get_money());
+		string mesage = "You are lose" + score;
+
+		ShowMesage("You lose. You earned: ", nhanvat.get_money());
 		quit = true;
 		// show masage 
 	}
@@ -1446,6 +1449,7 @@ void end_game(bool &quit)
 			{
 				// keets xuat ra man hin
 				gift_money.render(NULL, g_render);
+				
 			}
 			
 			// neu nhan vat nhan dc tien
@@ -1459,6 +1463,7 @@ void end_game(bool &quit)
 					nhanvat.bulletnhanvat.erase(nhanvat.bulletnhanvat.begin() + i);
 				}
 
+				ShowMesage("You win. You earned: ", nhanvat.get_money());
 				quit = true;
 			}
 		}
@@ -1506,4 +1511,10 @@ void reset()
 		l_money->free();
 		delete l_money;
 	}
+}
+void ShowMesage(string s, int score)
+{
+	string score_ = to_string(score);
+	s += score_;
+	SDL_ShowSimpleMessageBox(0xfa, "Game over", s.c_str(), g_window);
 }
