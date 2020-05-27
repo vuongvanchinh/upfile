@@ -5,6 +5,7 @@
 #include"quai_object.h"
 #include"Text.h"
 
+int delta = 0;
 
 // global variables
 
@@ -290,12 +291,12 @@ void XU_LY_SPRITE_QUAI_BAY()
 {
 	for (int i = 0; i < chimbay.size(); i++)
 	{
+		
 // nếu khoang cách của chim và nhân vật nhnhỏ hơn SCREEN_WIDTH-LIMIT_FRIRST thì mới kết xuất chim ra mà hình ra 
 		if (abs(nhanvat.getposx() - chimbay[i]->getposx()) < SCREEN_WIDTH-LIMIT_FRIRST)
 		{
-			// show chim bay 
-			chimbay[i]->render(&spritechimbay[chimbay[i]->getkhunghinh() / DELAY_SPRITE_CHIMBAY],g_render);
-		
+			delta= delta_;
+			chimbay[i]->render(&spritechimbay[chimbay[i]->getkhunghinh() / DELAY_SPRITE_CHIMBAY], g_render);
 			// neu chim cham nguoi
 			if (isVaCham(nhanvat.getposx(), nhanvat.getposy(),
 				spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].w,
@@ -376,6 +377,9 @@ void XU_LY_SPRITE_QUAI_BAY()
 				}
 			}
 
+		}else
+		{
+			delta = 0;
 		}
 
 	}
@@ -396,6 +400,7 @@ void XU_LY_DI_CHUYEN(object &background, object &nhanvat,SDL_Event &e)
 			{
 				nhanvat.setkhunghinh(18*DELAY_SPRITE_NHANVAT);
 				nhanvat.settrangthai (right_to_left);
+				
 			}
 			else 
 				if (nhanvat.gettrangthai() == right_to_left)
@@ -437,7 +442,6 @@ void XU_LY_DI_CHUYEN(object &background, object &nhanvat,SDL_Event &e)
 			{
 				nhanvat.setkhunghinh(6*DELAY_SPRITE_NHANVAT);
 				nhanvat.settrangthai(left_to_right);
-				
 			}
 			else
 			{
@@ -480,10 +484,6 @@ void XU_LY_DI_CHUYEN(object &background, object &nhanvat,SDL_Event &e)
 			{
 				nhanvat.settrangthai(up_left_to_right);
 				nhanvat.setkhunghinh(1 * DELAY_SPRITE_NHANVAT);
-				if (nhanvat.getposy() >= DOCAOSAN - spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h)
-				{
-					nhanvat.setposy(nhanvat.getposy() - SUC_BAT);
-				}
 			}
 			else
 			{
@@ -491,43 +491,53 @@ void XU_LY_DI_CHUYEN(object &background, object &nhanvat,SDL_Event &e)
 				{
 					nhanvat.settrangthai(up_right_to_left);
 					nhanvat.setkhunghinh(13 * DELAY_SPRITE_NHANVAT);
-					if (nhanvat.getposy() >= DOCAOSAN - spritenhanvat[nhanvat.getkhunghinh() / DELAY_SPRITE_NHANVAT].h)
-					{
-						nhanvat.setposy(nhanvat.getposy() - SUC_BAT);
-						
-					}
 				}
 			}
-		
+
+			if (nhanvat.getposy() >= DOCAOSAN - spritenhanvat[nhanvat.getkhunghinh()
+				/ DELAY_SPRITE_NHANVAT].h)
+			{
+				nhanvat.v_y = -(y_value);
+				nhanvat.gethigh = false;
+			}
 		}
 		default:
 			break;
 		}
 	}
+	
 }
 void XU_LY_SPRITE_NHANVAT(object &nhanvat)
 {
-	//trong luc 
-	if (nhanvat.getposy() < DOCAOSAN - spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].h)
+	if (nhanvat.getposy()<=DOCAOSAN-SUC_BAT )
 	{
-		nhanvat.setposy(nhanvat.getposy() + GIATOC_TRONGTRUONG);
+		nhanvat.gethigh = true;
+		nhanvat.v_y = y_value;
 	}	
 	else
 	{
-		switch (nhanvat.gettrangthai())
+		if (nhanvat.getposy() >= DOCAOSAN-
+			spritenhanvat[nhanvat.getkhunghinh()/DELAY_SPRITE_NHANVAT].h)
 		{
-		case up_left_to_right:
-			nhanvat.settrangthai(left_to_right);
-			nhanvat.setkhunghinh(6 * DELAY_SPRITE_NHANVAT);
-
-			break;
-		case up_right_to_left:
-			nhanvat.settrangthai(right_to_left);
-			nhanvat.setkhunghinh(18 * DELAY_SPRITE_NHANVAT);
-			break;
-		default: break;
+			if (nhanvat.gethigh == true)
+			{
+				nhanvat.gethigh = false;
+				nhanvat.v_y = 0;
+			}
+			switch (nhanvat.gettrangthai())
+			{
+				case up_left_to_right:
+					nhanvat.settrangthai(left_to_right);
+					nhanvat.setkhunghinh(6 * DELAY_SPRITE_NHANVAT);
+					break;
+				case up_right_to_left:
+					nhanvat.settrangthai(right_to_left);
+					nhanvat.setkhunghinh(18 * DELAY_SPRITE_NHANVAT);
+					break;
+				default: break;
+			}
 		}
-		
+
 	}
 
 	if (nhanvat.gettrangthai() == left_to_right)
@@ -544,6 +554,11 @@ void XU_LY_SPRITE_NHANVAT(object &nhanvat)
 				nhanvat.setkhunghinh(18*DELAY_SPRITE_NHANVAT);
 		}
 	}
+	if (nhanvat.delay % 4 == 0)
+	{
+		nhanvat.setposy(nhanvat.getposy() + nhanvat.v_y);
+	}
+	nhanvat.delay++; 
 }
 void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI )
 { 	
@@ -556,8 +571,8 @@ void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI )
 			if (abs(nhanvat.getposx() - QUAI_DOI.getposx()) <= SCREEN_WIDTH - LIMIT_FRIRST)
 
 			{
-				
-				QUAI_DOI.render(&sprite_quaidoi[QUAI_DOI.getkhunghinh() / 
+				delta = delta_;
+				QUAI_DOI.render(&sprite_quaidoi[QUAI_DOI.getkhunghinh() /
 					DELAY_SPRITE_QUAI_DOI], g_render);
 
 				// XU LY KHUNG HINH QUAI DOI
@@ -622,6 +637,10 @@ void XU_LY_PRITE_QUAI_DOI(quai_object& QUAI_DOI )
 						}else QUAI_DOI.BULLET.setkhunghinh(QUAI_DOI.BULLET.getkhunghinh() + 1);
 					}
 				}
+			}
+			else
+			{
+				delta = 0;
 			}
 		}
 }
@@ -1403,6 +1422,7 @@ void PLAY_GAME()
 		show_score(nhanvat.get_money(), g_render);
 
 		//================================================================
+
 		end_game(quit);
 		SDL_RenderPresent(g_render);
 	}
@@ -1489,6 +1509,7 @@ void reset()
 	nhanvat.setkhunghinh(6 * DELAY_SPRITE_NHANVAT);
 	nhanvat.settrangthai(left_to_right);
 	nhanvat.set_money(0);
+	nhanvat.setposy(DOCAOSAN - spritenhanvat[6].h);
 
 	
 	background.setposx(0);
