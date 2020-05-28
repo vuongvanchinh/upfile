@@ -12,6 +12,7 @@
 #include<SDL_messagebox.h>
 #include<ctime>
 
+
 using namespace std;
 
 
@@ -30,20 +31,20 @@ const int LIMIT_LAST = SCREEN_WIDTH - 600;
 const int SO_LAN_CHIM_MAX = 4;
 const int vantoc_dan_chimbay = 2;
 
-const int DELAY_SPRITE_NHANVAT = 2;
+const int DELAY_SPRITE_NHANVAT = 1;
 
 const int DELAY_SPRITE_CHIMBAY = 10;
 
-const int DELAY_SPRITE_QUAI_DOI = 80;
+const int DELAY_SPRITE_QUAI_DOI = 1;
 
-const int DELAY_SPRITE_BULLET_QUAI_DOI = 10;
+const int DELAY_SPRITE_BULLET_QUAI_DOI = 1;
 const int SO_CHIM_BAY = 20;
 const int SUC_BAT = 300;
 const int GIATOC_TRONGTRUONG = 1;
-const int y_value = 5;
-
-const int delta_ = 5;
-const int y_value2 = 10;
+const int y_value = 20;
+const int FPS = 80;
+const int delta_ = 0;
+const int y_value2 = 0;
 enum status {
 	left_to_right,
 	right_to_left,

@@ -1398,7 +1398,7 @@ void PLAY_GAME()
 			// them dan vao bang khi nhan chuot trai va am 
 			khoitaobangdan(nhanvat, e);
 		}
-
+		int start_time = SDL_GetTicks();
 		SDL_SetRenderDrawColor(g_render, 0xFF, 0xFF, 0xFF, 0xFF);
 		SDL_RenderClear(g_render);
 		// SHOW BACKGROUND 
@@ -1425,6 +1425,13 @@ void PLAY_GAME()
 
 		end_game(quit);
 		SDL_RenderPresent(g_render);
+		int real_time = SDL_GetTicks()-start_time;
+		int timeperframe = 1000 / FPS;
+		if (real_time < timeperframe)
+		{
+			int delaytime = timeperframe - real_time;
+			SDL_Delay(delaytime);
+		}
 	}
 }
 void end_game(bool &quit)
